@@ -8,12 +8,20 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import org.json.JSONObject;
+import org.json.JSONArray;
 
 /**
  *
  * @author ndumi
  */
 public class Message {
+
+/**
+ * Send the message - sets status to SENT
+     * @return 
+ */
+
     public enum Status { SENT, DISREGARDED, STORED }
 
     private String messageId; // 10-digit string
@@ -47,7 +55,8 @@ public class Message {
     public static String generateMessageId() {
         Random rnd = new Random();
         long v = Math.abs(rnd.nextLong()) % 1_000_000_0000L; // up to 10 digits
-        return String.format("%010d", v);
+        return String.format("%010d"
+                , v);
     }
 
     // Method: checkMessageID - ensures it's exactly 10 digits
@@ -87,18 +96,22 @@ public class Message {
     // 0 send, 1 disregard, 2 store
     public String performAction(int actionCode) {
         switch (actionCode) {
-            case 0:
+            case 0 -> {
                 this.status = Status.SENT;
                 return "Message successfully sent";
-            case 1:
+            }
+            case 1 -> {
                 this.status = Status.DISREGARDED;
                 return "Press 0 to delete message.";
-            case 2:
+            }
+            case 2 -> {
                 this.status = Status.STORED;
                 return "Message successfully stored.";
-            default:
+            }
+            default -> {
                 this.status = Status.DISREGARDED;
                 return "Action cancelled, message disregarded.";
+            }
             
         }
     }
@@ -108,14 +121,23 @@ public class Message {
         return String.format("MessageID: %s\nMessage Hash: %s\nRecipient: %s\nMessage: %s",
                 this.messageId, this.messageHash, this.recipient, this.messageText);
     }
-
-    // Method: returnTotalMessages - returns count of messages whose status == SENT
-    public static int returnTotalMessages(List<Message> list) {
-        if (list == null) return 0;
-        int count = 0;
-        for (Message m : list) if (m.status == Status.SENT) count++;
-        return count;
+    /**
+ * Returns count of messages whose status == SENT
+     * @param list
+     * @return 
+ */
+public static int returnTotalMessages(List<Message> list) {
+    if (list == null) return 0;
+    
+    int count = 0;
+    for (Message m : list) {
+        if (m.getStatus() == Status.SENT) {
+            count++;
+        }
     }
+    return count;
+}
+   
 
     // Method: printMessages - returns a concatenated string of all messages
     public static String printMessages(List<Message> list) {
@@ -127,36 +149,45 @@ public class Message {
         }
         return sb.toString();
     }
+    /**
+ * Send the message - sets status to SENT
+     * @return 
+ */
+public String sendMessage(){
+    this.status = Status.SENT;
+    return "Message sent successfully!";
+}
 
-    // Method: storeMessagesToJson - writes messages to a file as a JSON array
-    public static void storeMessagesToJson(List<Message> list, String filepath) throws IOException {
-        if (list == null) list = java.util.Collections.emptyList();
-        StringBuilder sb = new StringBuilder();
-        sb.append("[\n");
-        for (int i = 0; i < list.size(); i++) {
-            Message m = list.get(i);
-            sb.append(" {\n");
-            sb.append(" \"messageId\": \"").append(m.messageId).append("\",\n");
-            sb.append(" \"messageNumber\": ").append(m.messageNumber).append(",\n");
-            sb.append(" \"recipient\": \"").append(escapeJson(m.recipient)).append("\",\n");
-            sb.append(" \"messageText\": \"").append(escapeJson(m.messageText)).append("\",\n");
-            sb.append(" \"messageHash\": \"").append(escapeJson(m.messageHash)).append("\",\n");
-            sb.append(" \"status\": \"").append(m.status == null? "UNKNOWN" : m.status.name()).append("\"\n");
-            sb.append(" }");
-            if (i < list.size() - 1) sb.append(",");
-            sb.append("\n");
-        }
-        sb.append("]\n");
-        try (FileWriter fw = new FileWriter(filepath, false)) {
-            fw.write(sb.toString());
-        }
+/**
+ * Store messages to JSON file using org.json library
+     * @param list
+     * @param filepath
+     * @throws java.io.IOException
+ */
+public static void storeMessagesToJson(List<Message> list, String filepath) throws IOException {
+    if (list == null) {
+        list = java.util.Collections.emptyList();
     }
-
-    private static String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+    
+    JSONArray jsonArray = new JSONArray();
+    
+    for (Message m : list) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("messageId", m.getMessageId());
+        jsonObject.put("messageNumber", m.getMessageNumber());
+        jsonObject.put("recipient", m.getRecipient());
+        jsonObject.put("messageText", m.getMessageText());
+        jsonObject.put("messageHash", m.getMessageHash());
+        jsonObject.put("status", m.getStatus() != null ? m.getStatus().name() : "UNKNOWN");
+        
+        jsonArray.put(jsonObject);
     }
-
+    
+    try (FileWriter file = new FileWriter(filepath, false)) {
+        file.write(jsonArray.toString(4)); // Pretty print with 4-space indent
+        file.flush();
+    }
+}
     // Getters for tests
     public String getMessageId() { return messageId; }
     public int getMessageNumber() { return messageNumber; }
